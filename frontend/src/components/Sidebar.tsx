@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, BookOpen, Users, BookMarked, RefreshCw, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, BookMarked, RefreshCw, LogOut, Moon, Sun, ScrollText, Settings } from 'lucide-react';
 import { Tab, AuthUser, AdminDashboardStats, MemberDashboardStats } from '../types';
 import Logo from './Logo';
 
@@ -7,9 +7,14 @@ interface SidebarProps {
   tab: Tab;
   user: AuthUser;
   stats: AdminDashboardStats | MemberDashboardStats | null;
+  photoUrl?: string | null;
+  isDark: boolean;
   onTabChange: (tab: Tab) => void;
   onRefresh: () => void;
   onLogout: () => void;
+  onOpenProfile: () => void;
+  onOpenRules: () => void;
+  onToggleTheme: () => void;
 }
 
 const ADMIN_NAV = [
@@ -25,12 +30,17 @@ const MEMBER_NAV = [
   { id: 'borrows'   as Tab, icon: <BookMarked size={17}/>,      label: 'My Borrows' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ tab, user, stats, onTabChange, onRefresh, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  tab, user, stats, photoUrl, isDark,
+  onTabChange, onRefresh, onLogout, onOpenProfile, onOpenRules, onToggleTheme,
+}) => {
   const isAdmin  = user.role === 'admin';
   const navItems = isAdmin ? ADMIN_NAV : MEMBER_NAV;
   const pendingCount = isAdmin && stats ? (stats as AdminDashboardStats).pending_count : 0;
   const overdueCount = isAdmin && stats ? (stats as AdminDashboardStats).overdue_count : 0;
   const myOverdue    = !isAdmin && stats ? (stats as MemberDashboardStats).my_overdue  : 0;
+
+  const initials = (user.first_name || user.username)[0].toUpperCase();
 
   return (
     <aside className="sidebar">
@@ -43,10 +53,18 @@ const Sidebar: React.FC<SidebarProps> = ({ tab, user, stats, onTabChange, onRefr
         </div>
       </div>
 
-      {/* User */}
-      <div className="sidebar-user">
-        <div className="user-avatar">
-          {(user.first_name || user.username)[0].toUpperCase()}
+      {/* User — clickable to open profile */}
+      <div
+        className="sidebar-user"
+        onClick={onOpenProfile}
+        title="Edit Profile"
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="user-avatar" style={photoUrl ? { padding: 0, overflow: 'hidden' } : {}}>
+          {photoUrl
+            ? <img src={photoUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            : initials
+          }
         </div>
         <div className="user-info">
           <div className="user-name">{user.first_name || user.username}</div>
@@ -54,6 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ tab, user, stats, onTabChange, onRefr
             {isAdmin ? 'Admin' : 'Member'}
           </span>
         </div>
+        <Settings size={13} style={{ marginLeft: 'auto', opacity: 0.5 }} />
       </div>
 
       {/* Nav */}
@@ -77,10 +96,30 @@ const Sidebar: React.FC<SidebarProps> = ({ tab, user, stats, onTabChange, onRefr
             )}
           </button>
         ))}
+
+        {/* Rules button */}
+        <button
+          className="nav-item"
+          onClick={onOpenRules}
+          style={{ marginTop: 'auto' }}
+        >
+          <span className="nav-icon" style={{ display: 'flex', alignItems: 'center' }}><ScrollText size={17}/></span>
+          <span>Rules & Regulations</span>
+        </button>
       </nav>
 
       {/* Footer */}
       <div className="sidebar-footer">
+        {/* Dark/Light mode toggle */}
+        <button
+          className="refresh-btn"
+          onClick={onToggleTheme}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 6 }}
+        >
+          {isDark ? <Sun size={13}/> : <Moon size={13}/>}
+          {isDark ? 'Light Mode' : 'Dark Mode'}
+        </button>
+
         <button className="refresh-btn" onClick={onRefresh} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <RefreshCw size={13}/> Refresh
         </button>
