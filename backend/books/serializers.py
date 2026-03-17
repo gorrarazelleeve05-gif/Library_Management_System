@@ -1,3 +1,5 @@
+# LOCATION: backend/books/serializers.py
+
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -13,7 +15,6 @@ class LoginSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(serializers.Serializer):
-    """Self-registration — creates a User + Member profile."""
     username   = serializers.CharField(min_length=3, max_length=150)
     password   = serializers.CharField(write_only=True, min_length=6)
     first_name = serializers.CharField(max_length=150)
@@ -39,11 +40,11 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    role = serializers.SerializerMethodField()
+    role      = serializers.SerializerMethodField()
     member_id = serializers.SerializerMethodField()
 
     class Meta:
-        model = User
+        model  = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'member_id']
 
     def get_role(self, obj):
@@ -55,12 +56,23 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
 
+# ── Profile update (member updates own profile) ───────────────────────────────
+
+class UpdateProfileSerializer(serializers.Serializer):
+    first_name  = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name   = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email       = serializers.EmailField(required=False, allow_blank=True)
+    member_type = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    bio         = serializers.CharField(required=False, allow_blank=True)
+    photo_b64   = serializers.CharField(required=False, allow_blank=True)
+
+
 # ── Book ──────────────────────────────────────────────────────────────────────
 
 class BookSerializer(serializers.ModelSerializer):
-    is_available  = serializers.ReadOnlyField()
-    genre_color   = serializers.SerializerMethodField()
-    borrow_count  = serializers.SerializerMethodField()
+    is_available = serializers.ReadOnlyField()
+    genre_color  = serializers.SerializerMethodField()
+    borrow_count = serializers.SerializerMethodField()
 
     class Meta:
         model  = Book
@@ -114,8 +126,9 @@ class MemberSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email',
             'phone', 'joined_at', 'name', 'active_borrows_count',
+            'member_type', 'bio', 'photo_b64', 'profile_updated_at',
         ]
-        read_only_fields = ['id', 'joined_at']
+        read_only_fields = ['id', 'joined_at', 'profile_updated_at']
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
@@ -141,7 +154,6 @@ class MemberSerializer(serializers.ModelSerializer):
 
 
 class MemberCreateSerializer(MemberSerializer):
-    """Includes password field for creation."""
     password = serializers.CharField(write_only=True, required=False)
 
     class Meta(MemberSerializer.Meta):
@@ -151,12 +163,12 @@ class MemberCreateSerializer(MemberSerializer):
 # ── BorrowRecord ──────────────────────────────────────────────────────────────
 
 class BorrowRecordSerializer(serializers.ModelSerializer):
-    book_title   = serializers.CharField(source='book.title',        read_only=True)
-    book_author  = serializers.CharField(source='book.author',       read_only=True)
-    book_genre   = serializers.CharField(source='book.genre',        read_only=True)
-    member_name  = serializers.CharField(source='member.name',       read_only=True)
-    member_email = serializers.CharField(source='member.email',      read_only=True)
-    overdue_days   = serializers.ReadOnlyField()
+    book_title   = serializers.CharField(source='book.title',   read_only=True)
+    book_author  = serializers.CharField(source='book.author',  read_only=True)
+    book_genre   = serializers.CharField(source='book.genre',   read_only=True)
+    member_name  = serializers.CharField(source='member.name',  read_only=True)
+    member_email = serializers.CharField(source='member.email', read_only=True)
+    overdue_days    = serializers.ReadOnlyField()
     days_until_due  = serializers.ReadOnlyField()
     days_remaining  = serializers.ReadOnlyField()
 
@@ -174,12 +186,10 @@ class BorrowRecordSerializer(serializers.ModelSerializer):
     def validate(self, data):
         book   = data.get('book')
         member = data.get('member')
-
         if self.instance is None:
             if book and not book.is_available:
                 raise serializers.ValidationError(
-                    f"'{book.title}' is currently unavailable — all copies are checked out."
-                )
+                    f"'{book.title}' is currently unavailable.")
             if book and member:
                 already = BorrowRecord.objects.filter(
                     book=book, member=member,
@@ -187,14 +197,11 @@ class BorrowRecordSerializer(serializers.ModelSerializer):
                 ).exists()
                 if already:
                     raise serializers.ValidationError(
-                        f"{member.name} already has a pending or active borrow for '{book.title}'."
-                    )
-
+                        f"{member.name} already has a pending or active borrow for '{book.title}'.")
         due_date    = data.get('due_date')
         borrow_date = data.get('borrow_date', date.today())
         if due_date and due_date <= borrow_date:
             raise serializers.ValidationError("Due date must be after the borrow date.")
-
         return data
 
     def create(self, validated_data):

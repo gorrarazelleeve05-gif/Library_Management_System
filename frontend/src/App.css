@@ -1506,3 +1506,105 @@ body {
 }
 .dashboard-page .link-btn { color: var(--oak) !important; }
 .dashboard-page .link-btn:hover { color: var(--binding) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT MODE — triggered by data-theme="light" on <html>
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] {
+  --bg:          #f4f6fa;
+  --surface:     #ffffff;
+  --surface2:    #f0f2f8;
+  --surface3:    #e4e8f2;
+  --border:      #d0d5e8;
+  --text:        #1a1d2e;
+  --text-muted:  #6b7094;
+  --indigo:      #4f46e5;
+  --indigo-light:#6366f1;
+  --emerald:     #059669;
+  --violet:      #7c3aed;
+  --amber:       #d97706;
+  --rose:        #e11d48;
+  --teal:        #0d9488;
+}
+
+html[data-theme="light"] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Light mode: main content area */
+html[data-theme="light"] .main,
+html[data-theme="light"] .page {
+  background: var(--bg);
+}
+
+html[data-theme="light"] .book-card,
+html[data-theme="light"] .dash-section,
+html[data-theme="light"] .stat-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+html[data-theme="light"] .mini-row {
+  background: var(--surface2);
+}
+
+html[data-theme="light"] .search-input,
+html[data-theme="light"] .filter-select {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html[data-theme="light"] .form-field input,
+html[data-theme="light"] .form-field select,
+html[data-theme="light"] .form-field textarea {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html[data-theme="light"] .modal {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+html[data-theme="light"] .data-table tbody tr:hover {
+  background: var(--surface2);
+}
+
+html[data-theme="light"] .data-table td {
+  border-bottom-color: var(--border);
+}
+
+html[data-theme="light"] .table-wrap {
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+html[data-theme="light"] .btn-secondary {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html[data-theme="light"] .modal-overlay {
+  background: rgba(0,0,0,0.4);
+}
+
+html[data-theme="light"] .return-info {
+  background: var(--surface2);
+  border-color: var(--border);
+}
+
+html[data-theme="light"] .row-overdue td {
+  background: rgba(225,29,72,0.04);
+}
+
+html[data-theme="light"] .row-pending td {
+  background: rgba(217,119,6,0.04);
+}
+
+/* Photo overlay hover */
+.user-avatar:hover .photo-overlay { opacity: 1 !important; }
