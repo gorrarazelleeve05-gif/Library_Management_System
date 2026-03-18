@@ -27,8 +27,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoRegister }) => {
     } finally { setLoading(false); }
   };
 
-  const ic = { position: 'absolute' as const, left: 14, top: '50%', transform: 'translateY(-50%)', color: '#a97954', pointerEvents: 'none' as const, zIndex: 2 };
-
   return (
     <div className="login-page">
       {/* Left panel */}
@@ -72,17 +70,27 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoRegister }) => {
 
             <div className="form-field">
               <label>Username</label>
-              <div style={{ position: 'relative' }}>
-                <User size={14} style={ic}/>
-                <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter your username" autoFocus style={{ paddingLeft: 46 }}/>
+              <div className="input-icon-wrap">
+                <User size={14} className="input-icon"/>
+                <input
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  autoFocus
+                />
               </div>
             </div>
 
             <div className="form-field">
               <label>Password</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={14} style={ic}/>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" style={{ paddingLeft: 46 }}/>
+              <div className="input-icon-wrap">
+                <Lock size={14} className="input-icon"/>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                />
               </div>
             </div>
 
@@ -90,14 +98,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoRegister }) => {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="lfc-divider"><span>Demo credentials</span></div>
-
-          <div className="lfc-hints">
-            <p>Quick access</p>
-            <div className="lfc-hint-row"><span className="lfc-hint-role lfc-hint-admin">Admin</span><code>admin / admin123</code></div>
-            <div className="lfc-hint-row"><span className="lfc-hint-role lfc-hint-member">Member</span><code>alice / member123</code></div>
-          </div>
 
           <div style={{ marginTop: 22, textAlign: 'center' }}>
             <p style={{ color: '#7a5c3c', fontSize: 14, fontFamily: 'Jost, sans-serif' }}>
