@@ -1,5 +1,3 @@
-// LOCATION: frontend/src/modals/MemberProfileModal.tsx
-
 import React from 'react';
 import { Member, BorrowRecord } from '../types';
 import { ModalWrapper } from '../components/ModalWrapper';
@@ -18,9 +16,7 @@ function formatDate(d: string | null) {
 }
 
 const MemberProfileModal: React.FC<MemberProfileModalProps> = ({ member, borrows, onClose }) => {
-  // All profile data comes directly from the member object (loaded from Django backend)
-  // member.photo_b64, member.bio, member.member_type are saved to DB by the member
-  // Admin always sees the latest because it reads from the same database
+ 
   const photo   = (member as any).photo_b64   || null;
   const bio     = (member as any).bio         || null;
   const memType = (member as any).member_type || null;
@@ -88,7 +84,6 @@ const MemberProfileModal: React.FC<MemberProfileModalProps> = ({ member, borrows
         <div style={{ background:'rgba(169,121,84,.07)', border:'1px solid rgba(169,121,84,.2)',
           borderRadius:8, padding:'10px 14px', marginBottom:16,
           fontSize:12, color:'var(--oak)' }}>
-          ℹ️ This member hasn't set up their profile yet. Photo, bio and member type will appear here once they save their profile settings.
         </div>
       )}
 

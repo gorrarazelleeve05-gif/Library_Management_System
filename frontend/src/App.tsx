@@ -9,6 +9,7 @@ import {
   getBorrows, createBorrow, approveBorrow, rejectBorrow, returnBook,
   getDashboardStats,
 } from './api';
+import API from './api/books';
 
 // Auth
 import Login from './pages/Login';
@@ -29,14 +30,15 @@ import MemberDashboard from './pages/MemberDashboard';
 import MemberBorrows   from './pages/MemberBorrows';
 
 // Modals
-import BookModal          from './modals/BookModal';
-import MemberModal        from './modals/MemberModal';
-import BorrowModal        from './modals/BorrowModal';
-import ReturnModal        from './modals/ReturnModal';
-import ApproveRejectModal from './modals/ApproveRejectModal';
-import BookDetailModal    from './modals/BookDetailModal';
-import ProfileModal       from './modals/ProfileModal';
-import RulesModal         from './modals/RulesModal';
+import BookModal            from './modals/BookModal';
+import MemberModal          from './modals/MemberModal';
+import BorrowModal          from './modals/BorrowModal';
+import ReturnModal          from './modals/ReturnModal';
+import ApproveRejectModal   from './modals/ApproveRejectModal';
+import BookDetailModal      from './modals/BookDetailModal';
+import ProfileModal         from './modals/ProfileModal';
+import MemberProfileModal   from './modals/MemberProfileModal';
+import RulesModal           from './modals/RulesModal';
 
 import './App.css';
 
@@ -67,7 +69,7 @@ export default function App() {
   // ── Theme ─────────────────────────────────────────────────────
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
-    return saved !== 'light'; // default dark
+    return saved !== 'light';
   });
 
   useEffect(() => {
@@ -75,16 +77,35 @@ export default function App() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // ── Profile extras (photo, member_type, bio) ──────────────────
+  // ── Profile photo ─────────────────────────────────────────────
   const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
     try {
-      const extra = JSON.parse(localStorage.getItem('profile_extra') || '{}');
-      return extra.photo_url || null;
-    } catch { return null; }
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        return (u as any).photo_b64 || null;
+      }
+    } catch {}
+    return null;
   });
 
+  // ── Re-hydrate user from server on mount ──────────────────────
+  useEffect(() => {
+    if (!user) return;
+    API.get('/auth/me/')
+      .then((res: any) => {
+        const fresh = res.data;
+        const merged: AuthUser = { ...user, ...fresh } as any;
+        setUser(merged);
+        localStorage.setItem('user', JSON.stringify(merged));
+        setProfilePhoto((fresh as any).photo_b64 || null);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Navigation ────────────────────────────────────────────────
-  const [tab, setTab]           = useState<Tab>('dashboard');
+  const [tab, setTab]                   = useState<Tab>('dashboard');
   const [showRegister, setShowRegister] = useState(false);
   const [viewBookId, setViewBookId]     = useState<number | null>(null);
 
@@ -98,8 +119,9 @@ export default function App() {
   // ── Modal ─────────────────────────────────────────────────────
   const [modal,    setModal]    = useState<ModalType>(null);
   const [selected, setSelected] = useState<any>(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showRules,   setShowRules]   = useState(false);
+  const [showProfile,       setShowProfile]       = useState(false);
+  const [showRules,         setShowRules]         = useState(false);
+  const [memberProfileData, setMemberProfileData] = useState<Member | null>(null);
 
   // ── Toast ─────────────────────────────────────────────────────
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -112,12 +134,14 @@ export default function App() {
     localStorage.setItem('refresh_token', refresh);
     localStorage.setItem('user', JSON.stringify(loggedUser));
     setUser(loggedUser);
+    setProfilePhoto((loggedUser as any).photo_b64 || null);
     setTab('dashboard');
   };
 
   const handleLogout = () => {
     localStorage.clear();
     setUser(null);
+    setProfilePhoto(null);
     setBooks([]); setMembers([]); setBorrows([]); setStats(null);
   };
 
@@ -198,7 +222,8 @@ export default function App() {
   const handleProfileSaved = (updated: AuthUser, photoUrl?: string) => {
     setUser(updated);
     localStorage.setItem('user', JSON.stringify(updated));
-    if (photoUrl !== undefined) setProfilePhoto(photoUrl || null);
+    const photo = photoUrl !== undefined ? (photoUrl || null) : ((updated as any).photo_b64 || null);
+    setProfilePhoto(photo);
     setShowProfile(false);
     showToast('Profile updated!');
   };
@@ -207,7 +232,10 @@ export default function App() {
     if (showRegister) {
       return (
         <Register
-          onRegister={(u, access, refresh) => { handleLogin(u, access, refresh); setShowRegister(false); }}
+          onRegister={(u: AuthUser, access: string, refresh: string) => {
+            handleLogin(u, access, refresh);
+            setShowRegister(false);
+          }}
           onGoLogin={() => setShowRegister(false)}
         />
       );
@@ -225,12 +253,12 @@ export default function App() {
         stats={stats}
         photoUrl={profilePhoto}
         isDark={isDark}
-        onTabChange={t => setTab(t)}
+        onTabChange={(t: Tab) => setTab(t)}
         onRefresh={loadAll}
         onLogout={handleLogout}
         onOpenProfile={() => setShowProfile(true)}
         onOpenRules={() => setShowRules(true)}
-        onToggleTheme={() => setIsDark(d => !d)}
+        onToggleTheme={() => setIsDark((d: boolean) => !d)}
       />
 
       <main className={`main${tab === 'dashboard' ? ' dashboard-main' : ''}`}>
@@ -243,30 +271,32 @@ export default function App() {
           <Books
             books={books}
             onAdd={() => openModal('addBook')}
-            onEdit={b => openModal('editBook', b)}
-            onBorrow={b => openModal('borrowBook', b)}
-            onViewDetail={b => setViewBookId(b.id)}
-            onDeleted={msg => { showToast(msg); loadAll(); }}
-            onError={msg => showToast(msg, 'error')}
+            onEdit={(b: Book) => openModal('editBook', b)}
+            onBorrow={(b: Book) => openModal('borrowBook', b)}
+            onViewDetail={(b: Book) => setViewBookId(b.id)}
+            onDeleted={(msg: string) => { showToast(msg); loadAll(); }}
+            onError={(msg: string) => showToast(msg, 'error')}
           />
         )}
         {isAdmin && tab === 'members' && (
           <Members
             members={members}
+            borrows={borrows}
             onAdd={() => openModal('addMember')}
-            onEdit={m => openModal('editMember', m)}
-            onDeleted={msg => { showToast(msg); loadAll(); }}
-            onError={msg => showToast(msg, 'error')}
+            onEdit={(m: Member) => openModal('editMember', m)}
+            onProfile={(m: Member) => setMemberProfileData(m)}
+            onDeleted={(msg: string) => { showToast(msg); loadAll(); }}
+            onError={(msg: string) => showToast(msg, 'error')}
           />
         )}
         {isAdmin && tab === 'borrows' && (
           <Borrows
             borrows={borrows}
             onAdd={() => openModal('borrowBook')}
-            onReturn={r => openModal('returnBook', r)}
-            onApproveReject={r => openModal('approveReject', r)}
-            onDeleted={msg => { showToast(msg); loadAll(); }}
-            onError={msg => showToast(msg, 'error')}
+            onReturn={(r: BorrowRecord) => openModal('returnBook', r)}
+            onApproveReject={(r: BorrowRecord) => openModal('approveReject', r)}
+            onDeleted={(msg: string) => { showToast(msg); loadAll(); }}
+            onError={(msg: string) => showToast(msg, 'error')}
           />
         )}
 
@@ -277,7 +307,7 @@ export default function App() {
             books={books}
             borrows={borrows}
             onBrowse={() => setTab('books')}
-            onRequest={b => openModal('borrowBook', b)}
+            onRequest={(b: Book) => openModal('borrowBook', b)}
           />
         )}
         {!isAdmin && tab === 'books' && (
@@ -285,10 +315,10 @@ export default function App() {
             books={books}
             onAdd={() => {}}
             onEdit={() => {}}
-            onBorrow={b => openModal('borrowBook', b)}
-            onViewDetail={b => setViewBookId(b.id)}
+            onBorrow={(b: Book) => openModal('borrowBook', b)}
+            onViewDetail={(b: Book) => setViewBookId(b.id)}
             onDeleted={() => {}}
-            onError={msg => showToast(msg, 'error')}
+            onError={(msg: string) => showToast(msg, 'error')}
             readOnly
           />
         )}
@@ -299,33 +329,77 @@ export default function App() {
 
       {/* Modals */}
       {(modal === 'addBook' || modal === 'editBook') && (
-        <BookModal book={modal === 'editBook' ? selected : null} onClose={closeModal} onSave={handleSaveBook} />
+        <BookModal
+          book={modal === 'editBook' ? selected : null}
+          onClose={closeModal}
+          onSave={handleSaveBook}
+        />
       )}
       {(modal === 'addMember' || modal === 'editMember') && (
-        <MemberModal member={modal === 'editMember' ? selected : null} onClose={closeModal} onSave={handleSaveMember} />
+        <MemberModal
+          member={modal === 'editMember' ? selected : null}
+          onClose={closeModal}
+          onSave={handleSaveMember}
+        />
       )}
       {modal === 'borrowBook' && user && (
-        <BorrowModal books={books} members={members} user={user} initialBook={selected as Book | null} onClose={closeModal} onSave={handleBorrow} />
+        <BorrowModal
+          books={books}
+          members={members}
+          user={user}
+          initialBook={selected as Book | null}
+          onClose={closeModal}
+          onSave={handleBorrow}
+        />
       )}
       {modal === 'returnBook' && selected && (
-        <ReturnModal record={selected as BorrowRecord} onClose={closeModal} onSave={handleReturn} />
+        <ReturnModal
+          record={selected as BorrowRecord}
+          onClose={closeModal}
+          onSave={handleReturn}
+        />
       )}
       {modal === 'approveReject' && selected && (
-        <ApproveRejectModal record={selected as BorrowRecord} onClose={closeModal} onApprove={handleApprove} onReject={handleReject} />
+        <ApproveRejectModal
+          record={selected as BorrowRecord}
+          onClose={closeModal}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
       )}
       {viewBookId !== null && user && (
         <BookDetailModal
           bookId={viewBookId}
           user={user}
           onClose={() => setViewBookId(null)}
-          onBorrow={() => { setViewBookId(null); openModal('borrowBook', books.find(b => b.id === viewBookId) || null); }}
-          onReturn={recordId => { setViewBookId(null); const rec = borrows.find(b => b.id === recordId); if (rec) openModal('returnBook', rec); }}
+          onBorrow={() => {
+            setViewBookId(null);
+            openModal('borrowBook', books.find((b: Book) => b.id === viewBookId) || null);
+          }}
+          onReturn={(recordId: number) => {
+            setViewBookId(null);
+            const rec = borrows.find((b: BorrowRecord) => b.id === recordId);
+            if (rec) openModal('returnBook', rec);
+          }}
         />
       )}
 
-      {/* Profile & Rules */}
+      {/* Member Profile (admin view) */}
+      {memberProfileData && (
+        <MemberProfileModal
+          member={memberProfileData}
+          borrows={borrows}
+          onClose={() => setMemberProfileData(null)}
+        />
+      )}
+
+      {/* Own Profile & Rules */}
       {showProfile && user && (
-        <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={handleProfileSaved} />
+        <ProfileModal
+          user={user}
+          onClose={() => setShowProfile(false)}
+          onSaved={handleProfileSaved}
+        />
       )}
       {showRules && (
         <RulesModal onClose={() => setShowRules(false)} />

@@ -85,6 +85,28 @@ class MeView(APIView):
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
+    def patch(self, request):
+        user = request.user
+        data = request.data
+
+        # Update User fields
+        for field in ['first_name', 'last_name', 'email']:
+            if field in data:
+                setattr(user, field, data[field])
+        user.save()
+
+        # Update Member profile fields
+        if hasattr(user, 'member_profile'):
+            member = user.member_profile
+            for field in ['member_type', 'bio', 'photo_b64']:
+                if field in data:
+                    setattr(member, field, data[field])
+            from django.utils import timezone
+            member.profile_updated_at = timezone.now()
+            member.save()
+
+        return Response(UserSerializer(user).data)
+
 
 # ── Books (public read, admin write) ─────────────────────────────────────────
 
