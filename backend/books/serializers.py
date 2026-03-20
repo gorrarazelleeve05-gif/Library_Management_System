@@ -1,3 +1,5 @@
+# LOCATION: backend/books/serializers.py
+
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -39,12 +41,19 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    role = serializers.SerializerMethodField()
-    member_id = serializers.SerializerMethodField()
+    role        = serializers.SerializerMethodField()
+    member_id   = serializers.SerializerMethodField()
+    member_type = serializers.SerializerMethodField()
+    bio         = serializers.SerializerMethodField()
+    photo_b64   = serializers.SerializerMethodField()
 
     class Meta:
-        model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'member_id']
+        model  = User
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email',
+            'role', 'member_id',
+            'member_type', 'bio', 'photo_b64',
+        ]
 
     def get_role(self, obj):
         return 'admin' if obj.is_staff else 'member'
@@ -53,6 +62,30 @@ class UserSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'member_profile'):
             return obj.member_profile.id
         return None
+
+    def get_member_type(self, obj):
+        if hasattr(obj, 'member_profile'):
+            return obj.member_profile.member_type or ''
+        return ''
+
+    def get_bio(self, obj):
+        if hasattr(obj, 'member_profile'):
+            return obj.member_profile.bio or ''
+        return ''
+
+    def get_photo_b64(self, obj):
+        if hasattr(obj, 'member_profile'):
+            return obj.member_profile.photo_b64 or ''
+        return ''
+
+
+class UpdateProfileSerializer(serializers.Serializer):
+    first_name  = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name   = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email       = serializers.EmailField(required=False, allow_blank=True)
+    member_type = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    bio         = serializers.CharField(required=False, allow_blank=True)
+    photo_b64   = serializers.CharField(required=False, allow_blank=True)
 
 
 # ── Book ──────────────────────────────────────────────────────────────────────
@@ -114,8 +147,9 @@ class MemberSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email',
             'phone', 'joined_at', 'name', 'active_borrows_count',
+            'member_type', 'bio', 'photo_b64', 'profile_updated_at',
         ]
-        read_only_fields = ['id', 'joined_at']
+        read_only_fields = ['id', 'joined_at', 'profile_updated_at']
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
@@ -151,12 +185,12 @@ class MemberCreateSerializer(MemberSerializer):
 # ── BorrowRecord ──────────────────────────────────────────────────────────────
 
 class BorrowRecordSerializer(serializers.ModelSerializer):
-    book_title   = serializers.CharField(source='book.title',        read_only=True)
-    book_author  = serializers.CharField(source='book.author',       read_only=True)
-    book_genre   = serializers.CharField(source='book.genre',        read_only=True)
-    member_name  = serializers.CharField(source='member.name',       read_only=True)
-    member_email = serializers.CharField(source='member.email',      read_only=True)
-    overdue_days   = serializers.ReadOnlyField()
+    book_title   = serializers.CharField(source='book.title',   read_only=True)
+    book_author  = serializers.CharField(source='book.author',  read_only=True)
+    book_genre   = serializers.CharField(source='book.genre',   read_only=True)
+    member_name  = serializers.CharField(source='member.name',  read_only=True)
+    member_email = serializers.CharField(source='member.email', read_only=True)
+    overdue_days    = serializers.ReadOnlyField()
     days_until_due  = serializers.ReadOnlyField()
     days_remaining  = serializers.ReadOnlyField()
 

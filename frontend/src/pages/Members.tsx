@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Member } from '../types';
+import { Member, BorrowRecord } from '../types';
 import { deleteMember } from '../api';
 
 interface MembersProps {
   members: Member[];
+  borrows: BorrowRecord[];
   onAdd: () => void;
   onEdit: (member: Member) => void;
+  onProfile: (member: Member) => void;
   onDeleted: (msg: string) => void;
   onError: (msg: string) => void;
 }
@@ -16,7 +18,9 @@ function formatDate(d: string) {
   });
 }
 
-const Members: React.FC<MembersProps> = ({ members, onAdd, onEdit, onDeleted, onError }) => {
+const Members: React.FC<MembersProps> = ({
+  members, borrows, onAdd, onEdit, onProfile, onDeleted, onError,
+}) => {
   const [search, setSearch] = useState('');
 
   const filtered = members.filter(m =>
@@ -73,14 +77,14 @@ const Members: React.FC<MembersProps> = ({ members, onAdd, onEdit, onDeleted, on
                 <td className="muted">{formatDate(m.joined_at)}</td>
                 <td>
                   {m.active_borrows_count > 0
-                    ? <span className="badge badge-borrowed">{m.active_borrows_count} active</span>
+                    ? <span className="badge badge-borrowed">{m.active_borrows_count} Active</span>
                     : <span className="muted">None</span>
                   }
                 </td>
                 <td>
                   <div className="row-actions">
-                    <button className="btn-sm btn-edit" onClick={() => onEdit(m)}>Edit</button>
-                    <button className="btn-sm btn-delete" onClick={() => handleDelete(m)}>Remove</button>
+                    <button className="btn-sm btn-profile" onClick={() => onProfile(m)}>Profile</button>
+                    <button className="btn-sm btn-delete"  onClick={() => handleDelete(m)}>Remove</button>
                   </div>
                 </td>
               </tr>
@@ -89,7 +93,7 @@ const Members: React.FC<MembersProps> = ({ members, onAdd, onEdit, onDeleted, on
         </table>
         {filtered.length === 0 && (
           <div className="empty-state">
-            <div className="empty-icon" style={{fontSize:42,marginBottom:12}}>—</div>
+            <div className="empty-icon" style={{ fontSize: 42, marginBottom: 12 }}>—</div>
             <p>No members found</p>
           </div>
         )}
